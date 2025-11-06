@@ -3,22 +3,75 @@
 # AUTHOR        : DONG XUAN HIEN
 # DIVISION      : HYUNDAI KEFICO Co.,Ltd.
 # DESCRIPTION   : Handle logic to display
-# HISTORY       : 05/11/2025
+# HISTORY       : 06/11/2025
 # ============================================================================
 
 from django.shortcuts import render
 from .models import issue_data_table, issue_data_table_KVHS
+from django.db.models import Q
 
 def task_list(request):
+    # Get value from search box
     query = request.GET.get('search', '')  #get value from search bar, if not --> default is blank string
+    
+    # Get value from dropdown
+    key_filter = request.GET.get('key', '')
+    priority_filter = request.GET.get('priority', '')
+    reporter_filter = request.GET.get('reporter', '')
+    assignee_filter = request.GET.get('assignee', '')
+    status_filter = request.GET.get('status', '')
+    
+    # Create filter condition
+    filter_condition = Q()
     if query:
-        table1 = issue_data_table.objects.filter(assignee__icontains=query)
-        table2 = issue_data_table_KVHS.objects.filter(assignee__icontains=query)
-    else:
-        table1 = issue_data_table.objects.all()
-        table2 = issue_data_table_KVHS.objects.all()
-
-    # Merge data from 2 table
+        filter_condition &= (
+            Q(key__icontains=query) |
+            Q(request_title__icontains=query) |
+            Q(priority__icontains=query) |
+            Q(reporter__icontains=query) |
+            Q(assignee__icontains=query) |
+            Q(status__icontains=query) |
+            Q(created__icontains=query) |
+            Q(updated__icontains=query)
+        )
+    if key_filter: filter_condition &= Q(key=key_filter)
+    if priority_filter: filter_condition &= Q(priority=priority_filter)
+    if status_filter: filter_condition &= Q(status=status_filter)
+    if assignee_filter: filter_condition &= Q(assignee=assignee_filter)
+    if reporter_filter: filter_condition &= Q(reporter=reporter_filter)
+        
+    # Get value from 2 table in DB               
+    table1 = issue_data_table.objects.filter(filter_condition)
+    table2 = issue_data_table_KVHS.objects.filter(filter_condition)
     tasks = list(table1) + list(table2)
-    return render(request, 'task_list.html', {'tasks': tasks, 'query': query})
+    
+    # Get unique value list for dropdown
+    keys = sorted(set(issue_data_table.objects.values_list('key', flat=True)) |
+                set(issue_data_table_KVHS.objects.values_list('key', flat=True)))
+    priorities = sorted(set(issue_data_table.objects.values_list('priority', flat=True)) |
+                        set(issue_data_table_KVHS.objects.values_list('priority', flat=True)))
+    statuses = sorted(set(issue_data_table.objects.values_list('status', flat=True)) |
+                    set(issue_data_table_KVHS.objects.values_list('status', flat=True)))
+    assignees = sorted(set(issue_data_table.objects.values_list('assignee', flat=True)) |
+                    set(issue_data_table_KVHS.objects.values_list('assignee', flat=True)))
+    reporters = sorted(set(issue_data_table.objects.values_list('reporter', flat=True)) |
+                    set(issue_data_table_KVHS.objects.values_list('reporter', flat=True)))
+
+    return render(request, 'task_list.html', {
+        'tasks': tasks,
+        'query': query,
+        'keys': keys,
+        'priorities': priorities,
+        'statuses': statuses,
+        'assignees': assignees,
+        'reporters': reporters,
+        'filters': {
+            'key': key_filter,
+            'priority': priority_filter,
+            'status': status_filter,
+            'assignee': assignee_filter,
+            'reporter': reporter_filter
+        }
+    })
+    
 
