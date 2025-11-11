@@ -1,2 +1,6 @@
-# Hello-first-Web
-- Construct a web to tracking data of ticket. Then display data on the web.
+# ASW website
+- This ASW web include of many functions
+  + Tracking ticket from JIRA
+  + Storage document
+  + Report
+  + Tools: Storage many tool in it
